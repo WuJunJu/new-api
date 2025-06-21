@@ -105,6 +105,7 @@ type RelayInfo struct {
 	RelayFormat          string
 	SendResponseCount    int
 	ChannelCreateTime    int64
+	OriginalRequest      interface{}
 	ThinkingContentInfo
 	*ClaudeConvertInfo
 	*RerankerInfo

@@ -380,71 +380,64 @@ func StreamResponseClaude2OpenAI(reqMode int, claudeResponse *dto.ClaudeResponse
 
 func ResponseClaude2OpenAI(reqMode int, claudeResponse *dto.ClaudeResponse) *dto.OpenAITextResponse {
 	choices := make([]dto.OpenAITextResponseChoice, 0)
-	fullTextResponse := dto.OpenAITextResponse{
-		Id:      fmt.Sprintf("chatcmpl-%s", common.GetUUID()),
-		Object:  "chat.completion",
-		Created: common.GetTimestamp(),
+	responseText := ""
+	for _, claudeMessage := range claudeResponse.Content {
+		if claudeMessage.Type == "tool_use" {
+			toolCalls := make([]dto.ToolCallResponse, 0)
+			if claudeMessage.Input != nil {
+				if toolInput, ok := claudeMessage.Input.(map[string]any); ok {
+					arguments, _ := json.Marshal(toolInput)
+					toolCalls = append(toolCalls, dto.ToolCallResponse{
+						ID:   claudeMessage.Id,
+						Type: "function",
+						Function: dto.FunctionResponse{
+							Name:      claudeMessage.Name,
+							Arguments: string(arguments),
+						},
+					})
+				}
+			}
+			toolCallsJSON, _ := json.Marshal(toolCalls)
+			choice := dto.OpenAITextResponseChoice{
+				Index: 0,
+				Message: &dto.Message{
+					Role:      "assistant",
+					ToolCalls: toolCallsJSON,
+				},
+				FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
+			}
+			choices = append(choices, choice)
+		} else {
+			responseText += claudeMessage.GetText()
+		}
 	}
-	var responseText string
-	var responseThinking string
-	if len(claudeResponse.Content) > 0 {
-		responseText = claudeResponse.Content[0].GetText()
-		responseThinking = claudeResponse.Content[0].Thinking
-	}
-	tools := make([]dto.ToolCallResponse, 0)
-	thinkingContent := ""
 
-	if reqMode == RequestModeCompletion {
+	if len(choices) == 0 {
 		choice := dto.OpenAITextResponseChoice{
 			Index: 0,
-			Message: dto.Message{
+			Message: &dto.Message{
 				Role:    "assistant",
-				Content: strings.TrimPrefix(claudeResponse.Completion, " "),
-				Name:    nil,
+				Content: responseText,
 			},
 			FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 		}
 		choices = append(choices, choice)
-	} else {
-		fullTextResponse.Id = claudeResponse.Id
-		for _, message := range claudeResponse.Content {
-			switch message.Type {
-			case "tool_use":
-				args, _ := json.Marshal(message.Input)
-				tools = append(tools, dto.ToolCallResponse{
-					ID:   message.Id,
-					Type: "function", // compatible with other OpenAI derivative applications
-					Function: dto.FunctionResponse{
-						Name:      message.Name,
-						Arguments: string(args),
-					},
-				})
-			case "thinking":
-				// 加密的不管， 只输出明文的推理过程
-				thinkingContent = message.Thinking
-			case "text":
-				responseText = message.GetText()
-			}
+	}
+
+	fullTextResponse := dto.OpenAITextResponse{
+		Id:      claudeResponse.Id,
+		Object:  "chat.completion",
+		Created: common.GetTimestamp(),
+		Model:   claudeResponse.Model,
+		Choices: choices,
+	}
+	if claudeResponse.Usage != nil {
+		fullTextResponse.Usage = dto.Usage{
+			PromptTokens:     claudeResponse.Usage.InputTokens,
+			CompletionTokens: claudeResponse.Usage.OutputTokens,
+			TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
 		}
 	}
-	choice := dto.OpenAITextResponseChoice{
-		Index: 0,
-		Message: dto.Message{
-			Role: "assistant",
-		},
-		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
-	}
-	choice.SetStringContent(responseText)
-	if len(responseThinking) > 0 {
-		choice.ReasoningContent = responseThinking
-	}
-	if len(tools) > 0 {
-		choice.Message.SetToolCalls(tools)
-	}
-	choice.Message.ReasoningContent = thinkingContent
-	fullTextResponse.Model = claudeResponse.Model
-	choices = append(choices, choice)
-	fullTextResponse.Choices = choices
 	return &fullTextResponse
 }
 

@@ -98,7 +98,7 @@ func embeddingResponseAli2OpenAI(response *AliEmbeddingResponse, model string) *
 func responseAli2OpenAI(response *AliResponse) *dto.OpenAITextResponse {
 	choice := dto.OpenAITextResponseChoice{
 		Index: 0,
-		Message: dto.Message{
+		Message: &dto.Message{
 			Role:    "assistant",
 			Content: response.Output.Text,
 		},

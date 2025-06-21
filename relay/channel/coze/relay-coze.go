@@ -82,7 +82,7 @@ func cozeChatHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rela
 	response.Choices = []dto.OpenAITextResponseChoice{
 		{
 			Index:        0,
-			Message:      dto.Message{Role: "assistant", Content: responseContent},
+			Message:      &dto.Message{Role: "assistant", Content: responseContent},
 			FinishReason: "stop",
 		},
 	}

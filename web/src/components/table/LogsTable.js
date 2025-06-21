@@ -1089,6 +1089,89 @@ const LogsTable = () => {
             value: other.reasoning_effort,
           });
         }
+        
+        let messages = [];
+        let conversationRendered = false;
+
+        // New unified conversation display logic
+        if (other?.user_question) {
+          try {
+            // It's the new format, a JSON array of messages
+            messages = JSON.parse(other.user_question);
+          } catch (e) {
+            // It's the old format, a plain string.
+            messages.push({ role: 'user', content: other.user_question });
+          }
+
+          if (other?.ai_response) {
+            const lastMessage = messages[messages.length - 1];
+            if (
+              !(
+                lastMessage &&
+                lastMessage.role === 'assistant' &&
+                lastMessage.content === other.ai_response
+              )
+            ) {
+              messages.push({ role: 'assistant', content: other.ai_response });
+            }
+          }
+
+          const content = (
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {messages.map((message, i) => (
+                <div key={i} style={{ marginBottom: '1rem' }}>
+                  <Tag
+                    color={stringToColor(message.role)}
+                    style={{
+                      marginRight: '1rem',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    {message.role}
+                  </Tag>
+                  <Paragraph
+                    style={{
+                      display: 'inline-block',
+                      width: 'calc(100% - 70px)',
+                      wordBreak: 'break-all',
+                      whiteSpace: 'pre-wrap',
+                      marginTop: 0,
+                    }}
+                    copyable
+                  >
+                    {typeof message.content === 'string'
+                      ? message.content
+                      : JSON.stringify(message.content, null, 2)}
+                  </Paragraph>
+                </div>
+              ))}
+            </div>
+          );
+
+          expandDataLocal.push({
+            key: t('对话记录'),
+            value: content,
+          });
+          conversationRendered = true;
+        }
+
+        // Fallback for logs that might only have ai_response
+        if (!conversationRendered && other?.ai_response) {
+          expandDataLocal.push({
+            key: t('AI回答'),
+            value: (
+              <Paragraph
+                style={{
+                  wordBreak: 'break-all',
+                  whiteSpace: 'pre-wrap',
+                }}
+                copyable
+              >
+                {other.ai_response}
+              </Paragraph>
+            ),
+          });
+        }
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }

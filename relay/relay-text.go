@@ -90,6 +90,11 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 
 	// get & validate textRequest 获取并验证文本请求
 	textRequest, err := getAndValidateTextRequest(c, relayInfo)
+	
+	// Store original request for conversation context extraction
+	if err == nil {
+		relayInfo.OriginalRequest = textRequest
+	}
 
 	if err != nil {
 		common.LogError(c, fmt.Sprintf("getAndValidateTextRequest failed: %s", err.Error()))
@@ -540,6 +545,35 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 		other["audio_input_token_count"] = audioTokens
 		other["audio_input_price"] = audioInputPrice
 	}
+	
+	// Extract conversation context from original request
+	if relayInfo.OriginalRequest != nil {
+		if genReq, ok := relayInfo.OriginalRequest.(*dto.GeneralOpenAIRequest); ok && len(genReq.Messages) > 0 {
+			var aiResponse string
+
+			// Serialize the entire messages array to JSON
+			userQuestion, err := json.Marshal(genReq.Messages)
+			if err != nil {
+				common.SysError("error marshalling messages: " + err.Error())
+			}
+
+			// Extract AI response from context if available
+			if respData, exists := ctx.Get("ai_response"); exists {
+				if response, ok := respData.(string); ok {
+					aiResponse = response
+				}
+			}
+
+			// Store conversation context in other map
+			if len(userQuestion) > 0 {
+				other["user_question"] = string(userQuestion)
+			}
+			if aiResponse != "" {
+				other["ai_response"] = aiResponse
+			}
+		}
+	}
+	
 	model.RecordConsumeLog(ctx, relayInfo.UserId, relayInfo.ChannelId, promptTokens, completionTokens, logModel,
 		tokenName, quota, logContent, relayInfo.TokenId, userQuota, int(useTimeSeconds), relayInfo.IsStream, relayInfo.Group, other)
 }

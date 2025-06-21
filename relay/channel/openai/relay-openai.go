@@ -191,6 +191,12 @@ func OaiStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 		}
 	}
 
+	// Store AI response in context for logging
+	aiResponse := responseTextBuilder.String()
+	if aiResponse != "" {
+		c.Set("ai_response", aiResponse)
+	}
+
 	handleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, usage, containStreamUsage)
 
 	return nil, usage
@@ -252,6 +258,26 @@ func OpenaiHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayI
 			return service.OpenAIErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
 		}
 		responseBody = claudeRespStr
+	}
+
+	// Extract AI response for logging
+	var aiResponse string
+	for _, choice := range simpleResponse.Choices {
+		if choice.Message != nil {
+			content := choice.Message.StringContent()
+			if content != "" {
+				aiResponse += content
+			}
+			if choice.Message.ReasoningContent != "" {
+				aiResponse += choice.Message.ReasoningContent
+			}
+			if choice.Message.Reasoning != "" {
+				aiResponse += choice.Message.Reasoning
+			}
+		}
+	}
+	if aiResponse != "" {
+		c.Set("ai_response", aiResponse)
 	}
 
 	// Reset response body

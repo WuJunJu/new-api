@@ -658,9 +658,8 @@ func responseGeminiChat2OpenAI(c *gin.Context, response *GeminiChatResponse) *dt
 	for _, candidate := range response.Candidates {
 		choice := dto.OpenAITextResponseChoice{
 			Index: int(candidate.Index),
-			Message: dto.Message{
-				Role:    "assistant",
-				Content: "",
+			Message: &dto.Message{
+				Role: "assistant",
 			},
 			FinishReason: constant.FinishReasonStop,
 		}

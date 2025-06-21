@@ -55,7 +55,7 @@ func requestOpenAI2Baidu(request dto.GeneralOpenAIRequest) *BaiduChatRequest {
 func responseBaidu2OpenAI(response *BaiduChatResponse) *dto.OpenAITextResponse {
 	choice := dto.OpenAITextResponseChoice{
 		Index: 0,
-		Message: dto.Message{
+		Message: &dto.Message{
 			Role:    "assistant",
 			Content: response.Result,
 		},

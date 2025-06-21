@@ -110,7 +110,7 @@ func responseZhipu2OpenAI(response *ZhipuResponse) *dto.OpenAITextResponse {
 	for i, choice := range response.Data.Choices {
 		openaiChoice := dto.OpenAITextResponseChoice{
 			Index: i,
-			Message: dto.Message{
+			Message: &dto.Message{
 				Role:    choice.Role,
 				Content: strings.Trim(choice.Content, "\""),
 			},

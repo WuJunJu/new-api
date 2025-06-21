@@ -197,7 +197,7 @@ func cohereHandler(c *gin.Context, resp *http.Response, modelName string, prompt
 	openaiResp.Choices = []dto.OpenAITextResponseChoice{
 		{
 			Index:        0,
-			Message:      dto.Message{Content: cohereResp.Text, Role: "assistant"},
+			Message:      &dto.Message{Content: cohereResp.Text, Role: "assistant"},
 			FinishReason: stopReasonCohere2OpenAI(cohereResp.FinishReason),
 		},
 	}

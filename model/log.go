@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"one-api/common"
-	"one-api/constant"
+	//"one-api/constant"
 	"os"
 	"strings"
 	"time"
@@ -34,6 +34,8 @@ type Log struct {
 	TokenId          int    `json:"token_id" gorm:"default:0;index"`
 	Group            string `json:"group" gorm:"index"`
 	Ip               string `json:"ip" gorm:"index;default:''"`
+	UserQuestion     string `json:"user_question" gorm:"type:text;default:''"`
+	AIResponse       string `json:"ai_response" gorm:"type:text;default:''"`
 	Other            string `json:"other"`
 }
 
@@ -97,15 +99,8 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	common.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(other)
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if v, ok := settingMap[constant.UserSettingRecordIpLog]; ok {
-			if vb, ok := v.(bool); ok && vb {
-				needRecordIp = true
-			}
-		}
-	}
+	// 强制记录 IP 地址
+	needRecordIp := true
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -145,15 +140,21 @@ func RecordConsumeLog(c *gin.Context, userId int, channelId int, promptTokens in
 	}
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(other)
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if v, ok := settingMap[constant.UserSettingRecordIpLog]; ok {
-			if vb, ok := v.(bool); ok && vb {
-				needRecordIp = true
-			}
+	
+	// Extract user question and AI response from other map
+	userQuestion := ""
+	aiResponse := ""
+	if other != nil {
+		if uq, ok := other["user_question"].(string); ok {
+			userQuestion = uq
+		}
+		if ar, ok := other["ai_response"].(string); ok {
+			aiResponse = ar
 		}
 	}
+	
+	// 强制记录 IP 地址
+	needRecordIp := true
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -170,6 +171,8 @@ func RecordConsumeLog(c *gin.Context, userId int, channelId int, promptTokens in
 		UseTime:          useTimeSeconds,
 		IsStream:         isStream,
 		Group:            group,
+		UserQuestion:     userQuestion,
+		AIResponse:       aiResponse,
 		Ip: func() string {
 			if needRecordIp {
 				return c.ClientIP()
@@ -178,6 +181,12 @@ func RecordConsumeLog(c *gin.Context, userId int, channelId int, promptTokens in
 		}(),
 		Other: otherStr,
 	}
+	
+	// Log conversation context to console
+	if userQuestion != "" || aiResponse != "" {
+		common.LogInfo(c, fmt.Sprintf("对话上下文 - 用户问题: %s | AI回答: %s", userQuestion, aiResponse))
+	}
+	
 	err := LOG_DB.Create(log).Error
 	if err != nil {
 		common.LogError(c, "failed to record log: "+err.Error())

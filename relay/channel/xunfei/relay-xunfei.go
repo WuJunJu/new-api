@@ -63,7 +63,7 @@ func responseXunfei2OpenAI(response *XunfeiChatResponse) *dto.OpenAITextResponse
 	}
 	choice := dto.OpenAITextResponseChoice{
 		Index: 0,
-		Message: dto.Message{
+		Message: &dto.Message{
 			Role:    "assistant",
 			Content: response.Payload.Choices.Text[0].Content,
 		},

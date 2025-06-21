@@ -58,7 +58,7 @@ func responseTencent2OpenAI(response *TencentChatResponse) *dto.OpenAITextRespon
 	if len(response.Choices) > 0 {
 		choice := dto.OpenAITextResponseChoice{
 			Index: 0,
-			Message: dto.Message{
+			Message: &dto.Message{
 				Role:    "assistant",
 				Content: response.Choices[0].Messages.Content,
 			},

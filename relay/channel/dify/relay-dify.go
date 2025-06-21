@@ -273,7 +273,7 @@ func difyHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInf
 	}
 	choice := dto.OpenAITextResponseChoice{
 		Index: 0,
-		Message: dto.Message{
+		Message: &dto.Message{
 			Role:    "assistant",
 			Content: difyResponse.Answer,
 		},

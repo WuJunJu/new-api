@@ -46,7 +46,7 @@ func responsePaLM2OpenAI(response *PaLMChatResponse) *dto.OpenAITextResponse {
 	for i, candidate := range response.Candidates {
 		choice := dto.OpenAITextResponseChoice{
 			Index: i,
-			Message: dto.Message{
+			Message: &dto.Message{
 				Role:    "assistant",
 				Content: candidate.Content,
 			},
