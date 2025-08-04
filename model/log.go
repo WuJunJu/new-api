@@ -34,8 +34,8 @@ type Log struct {
 	TokenId          int    `json:"token_id" gorm:"default:0;index"`
 	Group            string `json:"group" gorm:"index"`
 	Ip               string `json:"ip" gorm:"index;default:''"`
-	UserQuestion     string `json:"user_question" gorm:"type:text;default:''"`
-	AIResponse       string `json:"ai_response" gorm:"type:text;default:''"`
+	UserQuestion     string `json:"user_question" gorm:"type:text"`
+	AIResponse       string `json:"ai_response" gorm:"type:text"`
 	Other            string `json:"other"`
 }
 
