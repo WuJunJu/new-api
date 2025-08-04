@@ -48,7 +48,7 @@ const (
 	LogTypeError
 )
 
-func formatUserLogs(logs []*Log) {
+func FormatLogs(logs []*Log, showIp bool) []*Log {
 	for i := range logs {
 		logs[i].ChannelName = ""
 		var otherMap map[string]interface{}
@@ -59,20 +59,24 @@ func formatUserLogs(logs []*Log) {
 		}
 		logs[i].Other = common.MapToJsonStr(otherMap)
 		logs[i].Id = logs[i].Id % 1024
+		if !showIp {
+			logs[i].Ip = ""
+		}
 	}
+	return logs
 }
 
 func GetLogByKey(key string) (logs []*Log, err error) {
 	if os.Getenv("LOG_SQL_DSN") != "" {
 		var tk Token
-		if err = DB.Model(&Token{}).Where(logKeyCol+"=?", strings.TrimPrefix(key, "sk-")).First(&tk).Error; err != nil {
+		if err = DB.Model(&Token{}).Where(logKeyCol+"= ?", strings.TrimPrefix(key, "sk-")).First(&tk).Error; err != nil {
 			return nil, err
 		}
-		err = LOG_DB.Model(&Log{}).Where("token_id=?", tk.Id).Find(&logs).Error
+		err = LOG_DB.Model(&Log{}).Where("token_id = ?", tk.Id).Find(&logs).Error
 	} else {
 		err = LOG_DB.Joins("left join tokens on tokens.id = logs.token_id").Where("tokens.key = ?", strings.TrimPrefix(key, "sk-")).Find(&logs).Error
 	}
-	formatUserLogs(logs)
+	logs = FormatLogs(logs, false)
 	return logs, err
 }
 
@@ -99,13 +103,6 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	common.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(other)
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if settingMap.RecordIpLog {
-			needRecordIp = true
-		}
-	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -122,13 +119,8 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 		UseTime:          useTimeSeconds,
 		IsStream:         isStream,
 		Group:            group,
-		Ip: func() string {
-			if needRecordIp {
-				return c.ClientIP()
-			}
-			return ""
-		}(),
-		Other: otherStr,
+		Ip:               c.ClientIP(),
+		Other:            otherStr,
 	}
 	err := LOG_DB.Create(log).Error
 	if err != nil {
@@ -172,13 +164,6 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		}
 	}
 
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if settingMap.RecordIpLog {
-			needRecordIp = true
-		}
-	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -197,20 +182,15 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		Group:            params.Group,
 		UserQuestion:     userQuestion,
 		AIResponse:       aiResponse,
-		Ip: func() string {
-			if needRecordIp {
-				return c.ClientIP()
-			}
-			return ""
-		}(),
-		Other: otherStr,
+		Ip:               c.ClientIP(),
+		Other:            otherStr,
 	}
 
 	// Log conversation context to console
 	if userQuestion != "" || aiResponse != "" {
 		common.LogInfo(c, fmt.Sprintf("对话上下文 - 用户问题: %s | AI回答: %s", userQuestion, aiResponse))
 	}
-	
+
 	err := LOG_DB.Create(log).Error
 	if err != nil {
 		common.LogError(c, "failed to record log: "+err.Error())
@@ -323,7 +303,7 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 		return nil, 0, err
 	}
 
-	formatUserLogs(logs)
+	logs = FormatLogs(logs, false)
 	return logs, total, err
 }
 
@@ -334,7 +314,7 @@ func SearchAllLogs(keyword string) (logs []*Log, err error) {
 
 func SearchUserLogs(userId int, keyword string) (logs []*Log, err error) {
 	err = LOG_DB.Where("user_id = ? and type = ?", userId, keyword).Order("id desc").Limit(common.MaxRecentItems).Find(&logs).Error
-	formatUserLogs(logs)
+	logs = FormatLogs(logs, false)
 	return logs, err
 }
 

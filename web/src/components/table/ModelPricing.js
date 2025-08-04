@@ -33,6 +33,7 @@ import {
   IconLayers
 } from '@douyinfe/semi-icons';
 import { UserContext } from '../../context/User/index.js';
+import { getCurrencySymbol } from '../../helpers/render.js';
 import { AlertCircle } from 'lucide-react';
 import { StatusContext } from '../../context/Status/index.js';
 
@@ -47,7 +48,14 @@ const ModelPricing = () => {
   const [activeKey, setActiveKey] = useState('all');
   const [pageSize, setPageSize] = useState(10);
 
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState(() => {
+    return localStorage.getItem('currency') || 'USD';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('currency', currency);
+    localStorage.setItem('display_in_currency', currency === 'CNY' ? 'true' : 'false');
+  }, [currency]);
   const [showWithRecharge, setShowWithRecharge] = useState(false);
   const [tokenUnit, setTokenUnit] = useState('M');
   const [statusState] = useContext(StatusContext);
@@ -142,10 +150,7 @@ const ModelPricing = () => {
       priceInUSD = usdPrice * priceRate / usdExchangeRate;
     }
 
-    if (currency === 'CNY') {
-      return `¥${(priceInUSD * usdExchangeRate).toFixed(3)}`;
-    }
-    return `$${priceInUSD.toFixed(3)}`;
+    return `${getCurrencySymbol()}${priceInUSD.toFixed(3)}`;
   };
 
   const columns = [
@@ -298,8 +303,8 @@ const ModelPricing = () => {
           const numInput = parseFloat(displayInput.replace(/[^0-9.]/g, '')) / divisor;
           const numCompletion = parseFloat(displayCompletion.replace(/[^0-9.]/g, '')) / divisor;
 
-          displayInput = `${currency === 'CNY' ? '¥' : '$'}${numInput.toFixed(3)}`;
-          displayCompletion = `${currency === 'CNY' ? '¥' : '$'}${numCompletion.toFixed(3)}`;
+          displayInput = `${getCurrencySymbol()}${numInput.toFixed(3)}`;
+          displayCompletion = `${getCurrencySymbol()}${numCompletion.toFixed(3)}`;
           content = (
             <div className="space-y-1">
               <div className="text-gray-700">
@@ -634,7 +639,7 @@ const ModelPricing = () => {
                         >
                           <IconInfoCircle className="flex-shrink-0 mt-0.5" size="small" />
                           <span>
-                            {t('按量计费费用 = 分组倍率 × 模型倍率 × （提示token数 + 补全token数 × 补全倍率）/ 500000 （单位：美元）')}
+                            {t('按量计费费用 = 分组倍率 × 模型倍率 × （提示token数 + 补全token数 × 补全倍率）/ 500000 （单位：人民币）')}
                           </span>
                         </div>
                       </div>

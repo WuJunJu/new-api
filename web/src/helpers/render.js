@@ -781,6 +781,24 @@ export const renderGroupOption = (item) => {
   );
 };
 
+export function getCurrencySymbol() {
+    if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('currency', 'CNY');
+    localStorage.setItem('display_in_currency', 'true');
+  }
+  return '¥';
+ }
+
+ // 全局替换翻译结果中的美元符号为当前货币符号，避免界面残留“$”
+ if (typeof i18next !== 'undefined' && !i18next.__currencyPatched) {
+   const originalT = i18next.t.bind(i18next);
+   i18next.t = (...args) => {
+     const res = originalT(...args);
+     return typeof res === 'string' ? res.replace(/\$/g, getCurrencySymbol()) : res;
+   };
+   i18next.__currencyPatched = true;
+ }
+
 export function renderNumber(num) {
   if (num >= 1000000000) {
     return (num / 1000000000).toFixed(1) + 'B';
@@ -800,7 +818,7 @@ export function renderQuotaNumberWithDigit(num, digits = 2) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   num = num.toFixed(digits);
   if (displayInCurrency) {
-    return '$' + num;
+    return getCurrencySymbol() + num;
   }
   return num;
 }
@@ -857,7 +875,7 @@ export function renderQuotaWithAmount(amount) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + amount;
+    return getCurrencySymbol() + amount;
   } else {
     return renderNumber(renderUnitWithQuota(amount));
   }
@@ -869,7 +887,7 @@ export function renderQuota(quota, digits = 2) {
   quotaPerUnit = parseFloat(quotaPerUnit);
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + (quota / quotaPerUnit).toFixed(digits);
+    return getCurrencySymbol() + (quota / quotaPerUnit).toFixed(digits);
   }
   return renderNumber(quota);
 }

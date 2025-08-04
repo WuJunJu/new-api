@@ -10,7 +10,7 @@ import (
 
 // from songquanpeng/one-api
 const (
-	USD2RMB = 7.3 // 暂定 1 USD = 7.3 RMB
+	USD2RMB = 1   // 暂定 1 USD = 1 RMB
 	USD     = 500 // $0.002 = 1 -> $1 = 500
 	RMB     = USD / USD2RMB
 )
@@ -426,27 +426,33 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 }
 
 func GetCompletionRatio(name string) float64 {
-	CompletionRatioMutex.RLock()
-	defer CompletionRatioMutex.RUnlock()
-	if strings.HasPrefix(name, "gpt-4-gizmo") {
-		name = "gpt-4-gizmo-*"
-	}
-	if strings.HasPrefix(name, "gpt-4o-gizmo") {
-		name = "gpt-4o-gizmo-*"
-	}
-	if strings.Contains(name, "/") {
-		if ratio, ok := CompletionRatio[name]; ok {
-			return ratio
-		}
-	}
-	hardCodedRatio, contain := getHardcodedCompletionModelRatio(name)
-	if contain {
-		return hardCodedRatio
-	}
-	if ratio, ok := CompletionRatio[name]; ok {
-		return ratio
-	}
-	return hardCodedRatio
+    CompletionRatioMutex.RLock()
+    defer CompletionRatioMutex.RUnlock()
+
+    // 统一处理特殊前缀，保持与旧逻辑一致
+    if strings.HasPrefix(name, "gpt-4-gizmo") {
+        name = "gpt-4-gizmo-*"
+    }
+    if strings.HasPrefix(name, "gpt-4o-gizmo") {
+        name = "gpt-4o-gizmo-*"
+    }
+
+    // 1. 优先返回用户自定义倍率（精确匹配包含 '/' 的情况以及普通模型名）
+    if ratio, ok := CompletionRatio[name]; ok {
+        return ratio
+    }
+
+    // 2. 其次使用内置硬编码倍率作为默认值
+    hardCodedRatio, contain := getHardcodedCompletionModelRatio(name)
+    if contain {
+        return hardCodedRatio
+    }
+
+    // 3. 如果未命中硬编码，但用户配置了倍率，则返回用户配置；否则返回默认值 1
+    if ratio, ok := CompletionRatio[name]; ok {
+        return ratio
+    }
+    return hardCodedRatio
 }
 
 func getHardcodedCompletionModelRatio(name string) (float64, bool) {

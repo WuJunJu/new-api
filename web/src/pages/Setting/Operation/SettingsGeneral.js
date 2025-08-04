@@ -122,7 +122,7 @@ export default function GeneralSettings(props) {
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.Input
                   field={'QuotaPerUnit'}
-                  label={t('单位美元额度')}
+                  label={t('单位人民币额度')}
                   initValue={''}
                   placeholder={t('一单位货币能兑换的额度')}
                   onChange={handleFieldChange('QuotaPerUnit')}
@@ -132,11 +132,11 @@ export default function GeneralSettings(props) {
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.Input
-                  field={'USDExchangeRate'}
-                  label={t('美元汇率（非充值汇率，仅用于定价页面换算）')}
+                  field={'RMBExchangeRate'}
+                  label={t('人民币汇率（非充值汇率，仅用于定价页面换算）')}
                   initValue={''}
-                  placeholder={t('美元汇率')}
-                  onChange={handleFieldChange('USDExchangeRate')}
+                  placeholder={t('人民币汇率')}
+                  onChange={handleFieldChange('RMBExchangeRate')}
                   showClear
                 />
               </Col>

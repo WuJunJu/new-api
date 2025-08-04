@@ -1,0 +1,2 @@
+# one-api/relay
+relay/relay-text.go:602:31: relayInfo.Group undefined (type *"one-api/relay/common".RelayInfo has no field or method Group)
